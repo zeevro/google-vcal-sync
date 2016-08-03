@@ -6,6 +6,7 @@ from __future__ import print_function
 import httplib2
 import os
 import dateutil
+import logging.handlers
 import ical
 
 import json
@@ -21,14 +22,43 @@ try:
 except ImportError:
     flags = None
 
-from constants import APPLICATION_NAME, CLIENT_SECRET_FILE, MY_CALENDAR_ID, MY_ICS_URL
+from constants import APPLICATION_NAME, CLIENT_SECRET_FILE, MY_CALENDAR_ID, MY_ICS_URL, LOG_PATH, LOG_SIZE
+
+
+_logger = None
+
+
+def get_logger():
+    logger = logging.getLogger()
+
+    if len(logger.handlers) == 2:
+        return logger
+
+    logger.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter('%(asctime)s,%(levelname)s,%(lineno)s,%(message)s')
+
+    for handler in logger.handlers:
+        logger.removeHandler(handler)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    console_handler.setLevel(logging.DEBUG)
+    logger.addHandler(console_handler)
+
+    file_handler = logging.handlers.RotatingFileHandler(LOG_PATH, maxBytes=LOG_SIZE, backupCount=10, encoding='utf8')
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(logging.INFO)
+    logger.addHandler(file_handler)
+
+    return logger
 
 
 def j(o, pretty=False):
     if pretty:
-        print(json.dumps(o, separators=(',', ': '), indent=2, sort_keys=True))
-    else:
-        print(json.dumps(o, separators=(',', ':'), sort_keys=True))
+        return json.dumps(o, separators=(',', ': '), indent=2, sort_keys=True)
+
+    return json.dumps(o, separators=(',', ':'), sort_keys=True)
 
 
 def get_credentials():
@@ -75,83 +105,106 @@ def get_entire_list(func, **kw):
 
 
 def main():
-    credentials = get_credentials()
-    http = credentials.authorize(httplib2.Http())
-    service = discovery.build('calendar', 'v3', http=http)
+    logger = get_logger()
 
-    if 0:
-        calendars = get_entire_list(service.calendarList().list, minAccessRole='writer')
-        for calendar in calendars:
-            print('%-20s [%-52s] primary=%5s  selected=%5s  description=%s' % (calendar['summary'],
-                                                                               calendar['id'],
-                                                                               calendar.get('primary', False),
-                                                                               calendar.get('selected', False),
-                                                                               calendar.get('description', '')))
-        return
+    logger.info('Started.')
 
-    if 0:
+    try:
         try:
-            service.calendars().delete(calendarId=MY_CALENDAR_ID).execute()
-        except discovery.HttpError as e:
-            if e.resp['status'] != '404':
-                raise
-        primary_calendar = service.calendars().get(calendarId='primary').execute()
-        j(service.calendars().insert(body={'summary': 'Facebook', 'timeZone': primary_calendar['timeZone']}).execute(), True)
-        return
+            credentials = get_credentials()
+            http = credentials.authorize(httplib2.Http())
+            service = discovery.build('calendar', 'v3', http=http)
+        except Exception:
+            logger.exception('Failed initializing API!')
+            return
 
-    all_events = {e['id']: e for e in get_entire_list(service.events().list, calendarId=MY_CALENDAR_ID)}
+        if 0:
+            calendars = get_entire_list(service.calendarList().list, minAccessRole='writer')
+            for calendar in calendars:
+                print('%-20s [%-52s] primary=%-5s  selected=%-5s  description=%s' % (calendar['summary'],
+                                                                                     calendar['id'],
+                                                                                     calendar.get('primary', False),
+                                                                                     calendar.get('selected', False),
+                                                                                     calendar.get('description', '')))
+            return
 
-    if 0:
-        j(all_events.values())
-        return
-
-    if 0:
-        j({event['id']: event['updated'] for event in all_events.values()}, True)
-        return
-
-    src_calendars = ical.get_url_tree(MY_ICS_URL)
-    events_to_delete = set(all_events.keys())
-    for src_calendar in src_calendars:
-        for src_event in src_calendar['_items']:
-            event_id = src_event['UID'][:src_event['UID'].find('@')]
-
-            print('--->', event_id, src_event['SUMMARY'])
-
-            dst_event = all_events.get(event_id)
-            if dst_event:
-                events_to_delete.remove(event_id)
-                if 'LAST-MODIFIED' in src_event and dateutil.parser.parse(src_event['LAST-MODIFIED']) <= dateutil.parser.parse(dst_event['updated']):
-                    print('Skip')
-                    continue
-
-            event = {'id': event_id,
-                     'summary': src_event['SUMMARY'],
-                     'start': {'dateTime': translate_dt(src_event['DTSTART'])},
-                     'source': {'title': 'Facebook event',
-                                'url': src_event['URL']}}
-
-            if 'DTEND' in src_event:
-                event['end'] = {'dateTime': translate_dt(src_event['DTEND'])}
-            if 'DESCRIPTION' in src_event:
-                event['description'] = src_event['DESCRIPTION']
-            if 'LOCATION' in src_event:
-                event['location'] = src_event['LOCATION']
-
-            j(event)
-
+        if 0:
             try:
-                if dst_event is None:
-                    print('insert')
-                    event = service.events().insert(calendarId=MY_CALENDAR_ID, body=event).execute()
-                else:
-                    print('update')
-                    event = service.events().update(calendarId=MY_CALENDAR_ID, eventId=event_id, body=event).execute()
+                service.calendars().delete(calendarId=MY_CALENDAR_ID).execute()
             except discovery.HttpError as e:
-                print('Error!', e)
+                if e.resp['status'] != '404':
+                    raise
+            primary_calendar = service.calendars().get(calendarId='primary').execute()
+            print(j(service.calendars().insert(body={'summary': 'Facebook', 'timeZone': primary_calendar['timeZone']}).execute(), True))
+            return
 
-    for event_id in events_to_delete:
-        print('Delete', event_id)
-        service.events().delete(calendarId=MY_CALENDAR_ID, eventId=event_id).execute()
+        all_events = {e['id']: e for e in get_entire_list(service.events().list, calendarId=MY_CALENDAR_ID)}
+
+        if 0:
+            print(j(all_events.values()))
+            return
+
+        if 0:
+            print(j({event['id']: event['updated'] for event in all_events.values()}, True))
+            return
+
+        try:
+            src_calendars = ical.get_url_tree(MY_ICS_URL)
+        except Exception:
+            logger.exception('Failed fetching source ICS!')
+            return
+
+        events_to_delete = set(all_events.keys())
+        for src_calendar in src_calendars:
+            for src_event in src_calendar['_items']:
+                event_id = src_event['UID'][:src_event['UID'].find('@')]
+
+                logger.info('Source event. id=%s summary=%s' % (event_id, src_event['SUMMARY']))
+
+                dst_event = all_events.get(event_id)
+                if dst_event:
+                    events_to_delete.remove(event_id)
+                    if 'LAST-MODIFIED' in src_event and dateutil.parser.parse(src_event['LAST-MODIFIED']) <= dateutil.parser.parse(dst_event['updated']):
+                        logger.info('Skip. id=%s' % event_id)
+                        continue
+
+                event = {'id': event_id,
+                         'summary': src_event['SUMMARY'],
+                         'start': {'dateTime': translate_dt(src_event['DTSTART'])},
+                         'source': {'title': 'Facebook event',
+                                    'url': src_event['URL']}}
+
+                if 'DTEND' in src_event:
+                    event['end'] = {'dateTime': translate_dt(src_event['DTEND'])}
+                if 'DESCRIPTION' in src_event:
+                    event['description'] = src_event['DESCRIPTION']
+                if 'LOCATION' in src_event:
+                    event['location'] = src_event['LOCATION']
+
+                logger.debug('Request body. id=%s %s' % (event_id, j(event)))
+
+                try:
+                    if dst_event is None:
+                        logger.info('Insert. id=%s' % event_id)
+                        event = service.events().insert(calendarId=MY_CALENDAR_ID, body=event).execute()
+                    else:
+                        logger.info('Update. id=%s' % event_id)
+                        event = service.events().update(calendarId=MY_CALENDAR_ID, eventId=event_id, body=event).execute()
+
+                    logger.debug('Response. id=%s %s' % (event_id, j(event)))
+                except discovery.HttpError as e:
+                    logger.error('Error! id=%s %s' % (event_id, e))
+
+        for event_id in events_to_delete:
+            logger.info('Delete. id=%s' % event_id)
+            try:
+                service.events().delete(calendarId=MY_CALENDAR_ID, eventId=event_id).execute()
+            except discovery.HttpError as e:
+                logger.error('Error! id=%s %s' % (event_id, e))
+    except Exception:
+        logger.exception('General failure!')
+
+    logger.info('Finished.')
 
 
 if __name__ == '__main__':
