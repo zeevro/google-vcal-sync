@@ -1,3 +1,4 @@
+# TODO: Find a way to associate events to specific source calendars
 # TODO: Figure out correct authentication scheme for servers
 # TODO: Web interface
 
