@@ -167,7 +167,7 @@ def main():
                 dst_event = all_events.get(event_id)
                 if dst_event:
                     events_to_delete.discard(event_id)
-                    if 'LAST-MODIFIED' in src_event and dateutil.parser.parse(src_event['LAST-MODIFIED']) <= dateutil.parser.parse(dst_event['updated']):
+                    if dst_event['status'] == 'cancelled' or ('LAST-MODIFIED' in src_event and dateutil.parser.parse(src_event['LAST-MODIFIED']) <= dateutil.parser.parse(dst_event['updated'])):
                         logger.info('Skip. id=%s' % event_id)
                         continue
 
