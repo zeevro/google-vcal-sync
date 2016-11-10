@@ -1,3 +1,4 @@
+# TODO: Find a way to associate events to specific source calendars
 # TODO: Figure out correct authentication scheme for servers
 # TODO: Web interface
 
@@ -138,7 +139,7 @@ def main():
             print(j(service.calendars().insert(body={'summary': 'Facebook', 'timeZone': primary_calendar['timeZone']}).execute(), True))
             return
 
-        all_events = {e['id']: e for e in get_entire_list(service.events().list, calendarId=MY_CALENDAR_ID)}
+        all_events = {e['id']: e for e in get_entire_list(service.events().list, calendarId=MY_CALENDAR_ID, showDeleted=True)}
 
         if 0:
             print(j(all_events.values()))
@@ -153,9 +154,11 @@ def main():
         except Exception:
             logger.exception('Failed fetching source ICS!')
             return
+        logger.info('Got %d calendar%s' % (len(src_calendars), 's' if len(src_calendars) != 1 else ''))
 
-        events_to_delete = set(all_events.keys())
+        events_to_delete = {k for k, v in all_events.iteritems() if v['status'] != 'cancelled'}
         for src_calendar in src_calendars:
+            logger.info('Calendar has %d event%s' % (len(src_calendar['_items']), 's' if len(src_calendar['_items']) != 1 else ''))
             for src_event in src_calendar['_items']:
                 event_id = src_event['UID'][:src_event['UID'].find('@')]
 
@@ -163,12 +166,13 @@ def main():
 
                 dst_event = all_events.get(event_id)
                 if dst_event:
-                    events_to_delete.remove(event_id)
+                    events_to_delete.discard(event_id)
                     if 'LAST-MODIFIED' in src_event and dateutil.parser.parse(src_event['LAST-MODIFIED']) <= dateutil.parser.parse(dst_event['updated']):
                         logger.info('Skip. id=%s' % event_id)
                         continue
 
                 event = {'id': event_id,
+                         'status': 'confirmed',
                          'summary': src_event['SUMMARY'],
                          'start': {'dateTime': translate_dt(src_event['DTSTART'])},
                          'source': {'title': 'Facebook event',
