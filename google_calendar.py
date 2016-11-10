@@ -154,6 +154,11 @@ def main():
         except Exception:
             logger.exception('Failed fetching source ICS!')
             return
+
+        if not src_calendars:
+            logger.warning('No source calendars! Exiting.')
+            return
+
         logger.info('Got %d calendar%s' % (len(src_calendars), 's' if len(src_calendars) != 1 else ''))
 
         events_to_delete = {k for k, v in all_events.iteritems() if v['status'] != 'cancelled'}
