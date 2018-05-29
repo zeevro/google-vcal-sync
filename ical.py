@@ -104,6 +104,8 @@ def get_file_tree(file_obj):
                     obj.setdefault(field, []).append(values)
                 else:
                     obj[field] = value
+        except Exception as e:
+            print(line, e.__class__.__name__, e)
         finally:
             if line is None:
                 break
@@ -113,6 +115,9 @@ def get_file_tree(file_obj):
 
 
 def get_url_tree(url):
+    class ChromeOpener(urllib.FancyURLopener):
+        version = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'
+    urllib._urlopener = ChromeOpener()
     return get_file_tree(urllib.urlopen(url))
 
 

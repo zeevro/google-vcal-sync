@@ -105,6 +105,40 @@ def get_entire_list(func, **kw):
     return ret
 
 
+def notify_no_sources():
+    try:
+        from constants import NOTIFICATION_FILE, IFTTT_MAKER_KEY, IFTTT_MAKER_EVENT
+        import pyfttt
+    except ImportError:
+        logger.exception('Failed importing notification stuff!')
+        return
+
+    try:
+        with open(NOTIFICATION_FILE) as f:
+            u = f.read().strip()
+    except Exception:
+        logger.exception('Failed reading notification file!')
+        u = None
+
+    if u == MY_ICS_URL:
+        logger.info('IFTTT event already triggered.')
+        return
+
+    try:
+        pyfttt.send_event('dNSxTcir9cIXus2UBo98Xm', 'fb_google_calendar_expired')
+    except Exception:
+        logger.exception('Failed sending IFTTT event trigger!')
+        return
+
+    try:
+        with open(NOTIFICATION_FILE, 'w') as f:
+            f.write(MY_ICS_URL)
+    except Exception:
+        logger.exception('Failed writing notification file!')
+
+    logger.info('Successfully triggered IFTTT event.')
+
+
 def main():
     logger = get_logger()
 
@@ -156,6 +190,7 @@ def main():
             return
 
         if not src_calendars:
+            notify_no_sources()
             logger.warning('No source calendars! Exiting.')
             return
 
