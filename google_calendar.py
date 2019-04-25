@@ -145,6 +145,7 @@ def main():
     logger.info('Started.')
 
     try:
+        # This is Google's stuff. Logs you into the service and gets the service API object.
         try:
             credentials = get_credentials()
             http = credentials.authorize(httplib2.Http())
@@ -154,6 +155,7 @@ def main():
             return
 
         if 0:
+            # Enable this to get a list of your calendars. This is used to set which calendar to use for Facebook events.
             calendars = get_entire_list(service.calendarList().list, minAccessRole='writer')
             for calendar in calendars:
                 print('%-20s [%-52s] primary=%-5s  selected=%-5s  description=%s' % (calendar['summary'],
@@ -164,6 +166,7 @@ def main():
             return
 
         if 0:
+            # I thik this makes a new calendar and prints its ID
             try:
                 service.calendars().delete(calendarId=MY_CALENDAR_ID).execute()
             except discovery.HttpError as e:
@@ -173,22 +176,27 @@ def main():
             print(j(service.calendars().insert(body={'summary': 'Facebook', 'timeZone': primary_calendar['timeZone']}).execute(), True))
             return
 
+        # Get all the events from the Google calendar
         all_events = {e['id']: e for e in get_entire_list(service.events().list, calendarId=MY_CALENDAR_ID, showDeleted=True)}
 
         if 0:
+            # This prints all the events currently on the Google Calendar
             print(j(all_events.values()))
             return
 
         if 0:
+            # This prints events IDs and when they were last updated
             print(j({event['id']: event['updated'] for event in all_events.values()}, True))
             return
 
+        # Get events from Facebook using our custom iCal library
         try:
             src_calendars = ical.get_url_tree(MY_ICS_URL)
         except Exception:
             logger.exception('Failed fetching source ICS!')
             return
 
+        # Take care of this end case where the Facebook URL is stale
         if not src_calendars:
             notify_no_sources()
             logger.warning('No source calendars! Exiting.')
@@ -196,14 +204,17 @@ def main():
 
         logger.info('Got %d calendar%s' % (len(src_calendars), 's' if len(src_calendars) != 1 else ''))
 
+        # Initiate the set of IDs to delete with all Google events
         events_to_delete = {k for k, v in all_events.iteritems() if v['status'] != 'cancelled'}
         for src_calendar in src_calendars:
             logger.info('Calendar has %d event%s' % (len(src_calendar['_items']), 's' if len(src_calendar['_items']) != 1 else ''))
             for src_event in src_calendar['_items']:
+                # Make ID for event using its Facebook event ID
                 event_id = src_event['UID'][:src_event['UID'].find('@')]
 
                 logger.info('Source event. id=%s summary=%s' % (event_id, src_event['SUMMARY']))
 
+                # If Facebook event is found on Google, remove it from events_to_delete. Also skip updating it if there are no new updates for it from Facebook.
                 dst_event = all_events.get(event_id)
                 if dst_event:
                     events_to_delete.discard(event_id)
@@ -211,6 +222,7 @@ def main():
                         logger.info('Skip. id=%s' % event_id)
                         continue
 
+                # Construct new Google event from Facebook data
                 event = {'id': event_id,
                          'status': 'confirmed',
                          'summary': src_event['SUMMARY'],
@@ -227,6 +239,7 @@ def main():
 
                 logger.debug('Request body. id=%s %s' % (event_id, j(event)))
 
+                # If event is existent, update. Otherwise, create new event.
                 try:
                     if dst_event is None:
                         logger.info('Insert. id=%s' % event_id)
@@ -239,6 +252,7 @@ def main():
                 except discovery.HttpError as e:
                     logger.error('Error! id=%s %s' % (event_id, e))
 
+        # Delete all Google events that aren't on Facebook
         for event_id in events_to_delete:
             logger.info('Delete. id=%s' % event_id)
             try:
