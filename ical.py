@@ -60,17 +60,16 @@ def get_file_tree(file_obj):
     lines = iter(file_obj)
     whole_line = next(lines)
     while True:
-        # TODO: Support UTF-8 decoding with line-breaks mid-multibyte characters
         try:
-            line = lines.next().decode('utf8').strip('\r\n')
-            if line[0] in ' \t':
+            line = next(lines).strip(b'\r\n')
+            if line[0] in b' \t':
                 whole_line += line[1:]
                 continue
         except StopIteration:
             line = None
 
         try:
-            field, value = whole_line.split(':', 1)
+            field, value = whole_line.decode('utf8').split(':', 1)
             value = unescape_str(value)
 
             if field == 'BEGIN':
@@ -133,7 +132,7 @@ def test():
 
     for calendar in tree:
         for event in reversed(calendar['_items']):
-            print('<%s> [%-12s] {%8s} %s by %s' % (
+            print('<{}> [{:12}] {{{:8}}} {} by {}'.format(
                 parser.parse(event['DTSTART']).strftime('%Y-%m-%d %H:%M'),
                 (event.get('PARTSTAT', '').replace('-', ' ').capitalize() or 'N/A').center(12),
                 event.get('SEQUENCE', '   N/A  '),
