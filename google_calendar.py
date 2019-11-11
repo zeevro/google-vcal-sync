@@ -152,11 +152,11 @@ def main():
             # Enable this to get a list of your calendars. This is used to set which calendar to use for Facebook events.
             calendars = get_entire_list(service.calendarList().list, minAccessRole='writer')  # pylint:disable=no-member
             for calendar in calendars:
-                print('%-20s [%-52s] primary=%-5s  selected=%-5s  description=%s' % (calendar['summary'],
-                                                                                     calendar['id'],
-                                                                                     calendar.get('primary', False),
-                                                                                     calendar.get('selected', False),
-                                                                                     calendar.get('description', '')))
+                print('{:<20} [{:<52}] primary={!s:<5}  selected={!s:<5}  description={}'.format(calendar['summary'],
+                                                                                                 calendar['id'],
+                                                                                                 calendar.get('primary', False),
+                                                                                                 calendar.get('selected', False),
+                                                                                                 calendar.get('description', '')))
             return
 
         if 0:
@@ -196,24 +196,24 @@ def main():
             logger.warning('No source calendars! Exiting.')
             return
 
-        logger.info('Got %d calendar%s' % (len(src_calendars), 's' if len(src_calendars) != 1 else ''))
+        logger.info('Got {} calendar{}'.format(len(src_calendars), 's' if len(src_calendars) != 1 else ''))
 
         # Initiate the set of IDs to delete with all Google events
         events_to_delete = {k for k, v in all_events.items() if v['status'] != 'cancelled'}
         for src_calendar in src_calendars:
-            logger.info('Calendar has %d event%s' % (len(src_calendar['_items']), 's' if len(src_calendar['_items']) != 1 else ''))
+            logger.info('Calendar has {} event{}'.format(len(src_calendar['_items']), 's' if len(src_calendar['_items']) != 1 else ''))
             for src_event in src_calendar['_items']:
                 # Make ID for event using its Facebook event ID
                 event_id = src_event['UID'][:src_event['UID'].find('@')]
 
-                logger.info('Source event. id=%s summary=%s' % (event_id, src_event['SUMMARY']))
+                logger.info('Source event. id={} summary={}'.format(event_id, src_event['SUMMARY']))
 
                 # If Facebook event is found on Google, remove it from events_to_delete. Also skip updating it if there are no new updates for it from Facebook.
                 dst_event = all_events.get(event_id)
                 if dst_event:
                     events_to_delete.discard(event_id)
                     if (dst_event['status'] == 'cancelled' and src_event['STATUS'] != 'CONFIRMED') or ('LAST-MODIFIED' in src_event and dateutil.parser.parse(src_event['LAST-MODIFIED']) <= dateutil.parser.parse(dst_event['updated'])):
-                        logger.info('Skip. id=%s' % event_id)
+                        logger.info('Skip. id={}'.format(event_id))
                         continue
 
                 # Construct new Google event from Facebook data
@@ -231,28 +231,28 @@ def main():
                 if 'LOCATION' in src_event:
                     event['location'] = src_event['LOCATION']
 
-                logger.debug('Request body. id=%s %s' % (event_id, j(event)))
+                logger.debug('Request body. id={} {}'.format(event_id, j(event)))
 
                 # If event is existent, update. Otherwise, create new event.
                 try:
                     if dst_event is None:
-                        logger.info('Insert. id=%s' % event_id)
+                        logger.info('Insert. id={}'.format(event_id))
                         event = service.events().insert(calendarId=MY_CALENDAR_ID, body=event).execute()  # pylint:disable=no-member
                     else:
-                        logger.info('Update. id=%s' % event_id)
+                        logger.info('Update. id={}'.format(event_id))
                         event = service.events().update(calendarId=MY_CALENDAR_ID, eventId=event_id, body=event).execute()  # pylint:disable=no-member
 
-                    logger.debug('Response. id=%s %s' % (event_id, j(event)))
+                    logger.debug('Response. id={} {}'.format(event_id, j(event)))
                 except discovery.HttpError as e:
-                    logger.error('Error! id=%s %s' % (event_id, e))
+                    logger.error('Error! id={} {}'.format(event_id, e))
 
         # Delete all Google events that aren't on Facebook
         for event_id in events_to_delete:
-            logger.info('Delete. id=%s' % event_id)
+            logger.info('Delete. id={}'.format(event_id))
             try:
                 service.events().delete(calendarId=MY_CALENDAR_ID, eventId=event_id).execute()  # pylint:disable=no-member
-            except discovery.HttpError as e:
-                logger.error('Error! id=%s %s' % (event_id, e))
+            except discovery.HttpError as e:  # pylint:disable=unreachable
+                logger.error('Error! id={} {}'.format(event_id, e))
     except Exception:
         logger.exception('General failure!')
 
