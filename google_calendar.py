@@ -6,21 +6,16 @@
 import httplib2
 import os
 import dateutil
-import logging.handlers
-import ical
-
 import json
+import argparse
+import logging.handlers
+import oauth2client.file
 
 from apiclient import discovery
-import oauth2client.file
 from oauth2client import client
 from oauth2client import tools
 
-try:
-    import argparse
-    flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-except ImportError:
-    flags = None
+import ical
 
 from constants import APPLICATION_NAME, CLIENT_SECRET_FILE, MY_CALENDAR_ID, MY_ICS_URL, LOG_PATH, LOG_SIZE
 
@@ -78,12 +73,10 @@ def get_credentials():
     store = oauth2client.file.Storage(credential_path)
     credentials = store.get()
     if not credentials or credentials.invalid:
-        flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, 'https://www.googleapis.com/auth/calendar')
+        flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
+        flow = client.flow_from_clientsecrets(os.path.normpath(os.path.expanduser(CLIENT_SECRET_FILE)), 'https://www.googleapis.com/auth/calendar')
         flow.user_agent = APPLICATION_NAME
-        if flags:
-            credentials = tools.run_flow(flow, store, flags)
-        else:  # Needed only for compatibility with Python 2.6
-            credentials = tools.run(flow, store)
+        credentials = tools.run_flow(flow, store, flags)
         print('Storing credentials to ' + credential_path)
     return credentials
 
@@ -105,6 +98,8 @@ def get_entire_list(func, **kw):
 
 
 def notify_no_sources():
+    logger = get_logger()
+
     try:
         from constants import NOTIFICATION_FILE, IFTTT_MAKER_KEY, IFTTT_MAKER_EVENT
         import pyfttt
@@ -155,7 +150,7 @@ def main():
 
         if 0:
             # Enable this to get a list of your calendars. This is used to set which calendar to use for Facebook events.
-            calendars = get_entire_list(service.calendarList().list, minAccessRole='writer')
+            calendars = get_entire_list(service.calendarList().list, minAccessRole='writer')  # pylint:disable=no-member
             for calendar in calendars:
                 print('%-20s [%-52s] primary=%-5s  selected=%-5s  description=%s' % (calendar['summary'],
                                                                                      calendar['id'],
@@ -167,16 +162,16 @@ def main():
         if 0:
             # I thik this makes a new calendar and prints its ID
             try:
-                service.calendars().delete(calendarId=MY_CALENDAR_ID).execute()
+                service.calendars().delete(calendarId=MY_CALENDAR_ID).execute()  # pylint:disable=no-member
             except discovery.HttpError as e:
                 if e.resp['status'] != '404':
                     raise
-            primary_calendar = service.calendars().get(calendarId='primary').execute()
-            print(j(service.calendars().insert(body={'summary': 'Facebook', 'timeZone': primary_calendar['timeZone']}).execute(), True))
+            primary_calendar = service.calendars().get(calendarId='primary').execute()  # pylint:disable=no-member
+            print(j(service.calendars().insert(body={'summary': 'Facebook', 'timeZone': primary_calendar['timeZone']}).execute(), True))  # pylint:disable=no-member
             return
 
         # Get all the events from the Google calendar
-        all_events = {e['id']: e for e in get_entire_list(service.events().list, calendarId=MY_CALENDAR_ID, showDeleted=True)}
+        all_events = {e['id']: e for e in get_entire_list(service.events().list, calendarId=MY_CALENDAR_ID, showDeleted=True)}  # pylint:disable=no-member
 
         if 0:
             # This prints all the events currently on the Google Calendar
@@ -242,10 +237,10 @@ def main():
                 try:
                     if dst_event is None:
                         logger.info('Insert. id=%s' % event_id)
-                        event = service.events().insert(calendarId=MY_CALENDAR_ID, body=event).execute()
+                        event = service.events().insert(calendarId=MY_CALENDAR_ID, body=event).execute()  # pylint:disable=no-member
                     else:
                         logger.info('Update. id=%s' % event_id)
-                        event = service.events().update(calendarId=MY_CALENDAR_ID, eventId=event_id, body=event).execute()
+                        event = service.events().update(calendarId=MY_CALENDAR_ID, eventId=event_id, body=event).execute()  # pylint:disable=no-member
 
                     logger.debug('Response. id=%s %s' % (event_id, j(event)))
                 except discovery.HttpError as e:
@@ -255,7 +250,7 @@ def main():
         for event_id in events_to_delete:
             logger.info('Delete. id=%s' % event_id)
             try:
-                service.events().delete(calendarId=MY_CALENDAR_ID, eventId=event_id).execute()
+                service.events().delete(calendarId=MY_CALENDAR_ID, eventId=event_id).execute()  # pylint:disable=no-member
             except discovery.HttpError as e:
                 logger.error('Error! id=%s %s' % (event_id, e))
     except Exception:
