@@ -92,4 +92,7 @@ ENV/
 .project
 .pydevproject
 
+# Visual Studio Code
+.vscode/
+
 constants.py
