@@ -1,10 +1,7 @@
-﻿from __future__ import unicode_literals
-
-import urllib
+﻿import urllib.request, urllib.parse, urllib.error
 import json
 
 from dateutil import parser
-
 
 from constants import MY_ICS_URL
 
@@ -44,10 +41,10 @@ def unescape_str(s):
             ret += D[c]
             i += 1
         elif c == 'x':
-            ret += unichr(int(s[i + 1: i + 3], 16))
+            ret += chr(int(s[i + 1: i + 3], 16))
             i += 3
         elif c.isdigit():
-            ret += unichr(int(s[i: i + 3], 8))
+            ret += chr(int(s[i: i + 3], 8))
             i += 3
         else:
             ret += c
@@ -61,7 +58,7 @@ def get_file_tree(file_obj):
     stack = []
     obj = None
     lines = iter(file_obj)
-    whole_line = lines.next()
+    whole_line = next(lines)
     while True:
         # TODO: Support UTF-8 decoding with line-breaks mid-multibyte characters
         try:
@@ -115,10 +112,10 @@ def get_file_tree(file_obj):
 
 
 def get_url_tree(url):
-    class ChromeOpener(urllib.FancyURLopener):
+    class ChromeOpener(urllib.request.FancyURLopener):
         version = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'
-    urllib._urlopener = ChromeOpener()
-    return get_file_tree(urllib.urlopen(url))
+    urllib.request._urlopener = ChromeOpener()
+    return get_file_tree(urllib.request.urlopen(url))
 
 
 def test():
@@ -136,13 +133,13 @@ def test():
 
     for calendar in tree:
         for event in reversed(calendar['_items']):
-            print '<%s> [%-12s] {%8s} %s by %s' % (
+            print('<%s> [%-12s] {%8s} %s by %s' % (
                 parser.parse(event['DTSTART']).strftime('%Y-%m-%d %H:%M'),
                 (event.get('PARTSTAT', '').replace('-', ' ').capitalize() or 'N/A').center(12),
                 event.get('SEQUENCE', '   N/A  '),
                 event['SUMMARY'],
                 event.get('ORGANIZER', [{'CN': 'Facebook'}])[0]['CN'],
-            )
+            ))
 
 
 if __name__ == '__main__':

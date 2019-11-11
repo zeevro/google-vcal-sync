@@ -2,7 +2,6 @@
 # TODO: Figure out correct authentication scheme for servers
 # TODO: Web interface
 
-from __future__ import print_function
 
 import httplib2
 import os
@@ -13,7 +12,7 @@ import ical
 import json
 
 from apiclient import discovery
-import oauth2client
+import oauth2client.file
 from oauth2client import client
 from oauth2client import tools
 
@@ -181,7 +180,7 @@ def main():
 
         if 0:
             # This prints all the events currently on the Google Calendar
-            print(j(all_events.values()))
+            print(j(list(all_events.values())))
             return
 
         if 0:
@@ -205,7 +204,7 @@ def main():
         logger.info('Got %d calendar%s' % (len(src_calendars), 's' if len(src_calendars) != 1 else ''))
 
         # Initiate the set of IDs to delete with all Google events
-        events_to_delete = {k for k, v in all_events.iteritems() if v['status'] != 'cancelled'}
+        events_to_delete = {k for k, v in all_events.items() if v['status'] != 'cancelled'}
         for src_calendar in src_calendars:
             logger.info('Calendar has %d event%s' % (len(src_calendar['_items']), 's' if len(src_calendar['_items']) != 1 else ''))
             for src_event in src_calendar['_items']:
