@@ -1,0 +1,12 @@
+CLIENT_SECRET_FILE = '~/google-vcal-sync.secret'
+APPLICATION_NAME = 'Facebook to Google Calendar synchronizer'
+
+MY_ICS_URL = 'http://localhost:1338/downloads/u773153069.ics'
+MY_CALENDAR_ID = '<replace_with_calendar_id>@group.calendar.google.com'
+
+LOG_PATH = '/var/log/google-vcal-sync.log'
+LOG_SIZE = 1024 * 1024 * 20
+
+NOTIFICATION_FILE = '/var/log/google-vcal-sync-fb-noti'
+IFTTT_MAKER_KEY = '<replace_with_key>'
+IFTTT_MAKER_EVENT = '<replace_with_event>'
