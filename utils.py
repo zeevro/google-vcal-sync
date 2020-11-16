@@ -59,8 +59,11 @@ def get_service_client():
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
+    token_path = os.path.join(os.path.dirname(__file__), 'token.pickle')
+    credentials_path = os.path.join(os.path.dirname(__file__), 'credentials.json')
+
+    if os.path.exists(token_path):
+        with open(token_path, 'rb') as token:
             creds = pickle.load(token)
 
     # If there are no (valid) credentials available, let the user log in.
@@ -68,12 +71,12 @@ def get_service_client():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', ['https://www.googleapis.com/auth/calendar'])
+            flow = InstalledAppFlow.from_client_secrets_file(credentials_path, ['https://www.googleapis.com/auth/calendar'])
             # creds = flow.run_local_server(port=0)
             creds = flow.run_console()
 
         # Save the credentials for the next run
-        with open('token.pickle', 'wb') as token:
+        with open(token_path, 'wb') as token:
             pickle.dump(creds, token)
 
     return discovery.build('calendar', 'v3', credentials=creds)
