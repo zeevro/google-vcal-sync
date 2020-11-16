@@ -96,3 +96,5 @@ ENV/
 .vscode/
 
 constants.py
+credentials.json
+token.pickle
