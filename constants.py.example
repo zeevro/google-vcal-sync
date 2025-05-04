@@ -1,9 +1,0 @@
-MY_ICS_URL = '<replace_with_facebook_events_ics_url>'
-MY_CALENDAR_ID = '<replace_with_calendar_id>@group.calendar.google.com'
-
-LOG_PATH = '/var/log/google-vcal-sync.log'
-LOG_SIZE = 1024 * 1024 * 20
-
-NOTIFICATION_FILE = '/var/log/google-vcal-sync-fb-noti'
-IFTTT_MAKER_KEY = '<replace_with_key>'
-IFTTT_MAKER_EVENT = '<replace_with_event>'

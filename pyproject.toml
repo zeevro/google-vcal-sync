@@ -1,0 +1,77 @@
+[build-system]
+requires = ["uv_build>=0.7.2,<0.8"]
+build-backend = "uv_build"
+
+[project]
+name = "google-vcal-sync"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "arrow",
+    "google-api-python-client",
+    "google-auth-httplib2",
+    "google-auth-oauthlib",
+    "ics",
+    "platformdirs",
+]
+
+[dependency-groups]
+dev = [
+    "google-api-python-client-stubs",
+]
+
+[project.scripts]
+google-vcal-sync = "google_vcal_sync:main"
+
+[tool.ruff]
+line-length = 150
+output-format = "concise"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "W191", # tab-indentation - conflicts with formatter
+    "E111", # indentation-with-invalid-multiple - conflicts with formatter
+    "E114", # indentation-with-invalid-multiple-comment - conflicts with formatter
+    "E117", # over-indented - conflicts with formatter
+    "D206", # indent-with-spaces - conflicts with formatter
+    "D300", # triple-single-quotes - conflicts with formatter
+    "Q000", # bad-quotes-inline-string - conflicts with formatter
+    "Q001", # bad-quotes-multiline-string - conflicts with formatter
+    "Q002", # bad-quotes-docstring - conflicts with formatter
+    "Q003", # avoidable-escaped-quote - conflicts with formatter
+    "COM812", # missing-trailing-comma - conflicts with formatter
+    "COM819", # prohibited-trailing-comma - conflicts with formatter
+    "E501", # line-too-long - see formatter documentation
+
+    "C90", # linter: mccabe
+    "D", # linter: pydocstyle
+    "FBT", # linter: flake8-boolean-trap
+    "EM", # linter: flake8-errmsg
+    "FIX", # linter: flake8-fixme
+
+    "S301", # suspicious-pickle-usage
+    "S310", # suspicious-url-open-usage
+    "BLE001", # blind-except
+    "TD002", # missing-todo-author
+    "TD003", # missing-todo-link
+    "PLR0904", # too-many-public-methods
+    "PLR0911", # too-many-return-statements
+    "PLR0912", # too-many-branches
+    "PLR0913", # too-many-arguments
+    "PLR0914", # too-many-locals
+    "PLR0915", # too-many-statements
+    "PLR0916", # too-many-boolean-expressions
+    "PLR0917", # too-many-positional-arguments
+    "TRY003", # raise-vanilla-args
+]
+
+[tool.ruff.lint.flake8-unused-arguments]
+ignore-variadic-names = true
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+lines-after-imports = 2
+
+[tool.ruff.format]
+quote-style = "single"
